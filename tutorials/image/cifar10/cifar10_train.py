@@ -67,8 +67,8 @@ def train():
     with tf.device('/cpu:0'):
       images, labels = cifar10.distorted_inputs()
 
-    # Build a Graph that computes the logits predictions from the
-    # inference model.
+    # Build a Graph that computes the logits predictions from the inference model.
+    # 构建CIFAR-10模型，用来计算预测值的 logits
     logits = cifar10.inference(images)
 
     # Calculate loss.

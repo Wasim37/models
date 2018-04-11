@@ -141,6 +141,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
 
 def distorted_inputs():
   """Construct distorted input for CIFAR training using the Reader ops.
+  使用Reader操作构造CIFAR训练的失真输入
 
   Returns:
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
@@ -187,6 +188,7 @@ def inputs(eval_data):
 
 def inference(images):
   """Build the CIFAR-10 model.
+  练习: inference的输出是未归一化的logits，尝试使用tf.softmax()修改网络架构后返回归一化的预测值。
 
   Args:
     images: Images returned from distorted_inputs() or inputs().

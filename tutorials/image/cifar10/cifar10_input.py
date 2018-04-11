@@ -76,6 +76,7 @@ def read_cifar10(filename_queue):
   # Read a record, getting filenames from the filename_queue.  No
   # header or footer in the CIFAR-10 format, so we leave header_bytes
   # and footer_bytes at their default of 0.
+  # 由于每个图片的存储字节数是固定的，因此可以使用tf.FixedLengthRecordReader函数读取
   reader = tf.FixedLengthRecordReader(record_bytes=record_bytes)
   result.key, value = reader.read(filename_queue)
 
@@ -139,6 +140,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
 
 def distorted_inputs(data_dir, batch_size):
   """Construct distorted input for CIFAR training using the Reader ops.
+     使用Reader操作构造CIFAR训练的失真输入
 
   Args:
     data_dir: Path to the CIFAR-10 data directory.
@@ -157,8 +159,10 @@ def distorted_inputs(data_dir, batch_size):
   # Create a queue that produces the filenames to read.
   filename_queue = tf.train.string_input_producer(filenames)
 
+  # 数据增强模块
   with tf.name_scope('data_augmentation'):
     # Read examples from files in the filename queue.
+    # 读取二进制图片文件
     read_input = read_cifar10(filename_queue)
     reshaped_image = tf.cast(read_input.uint8image, tf.float32)
 
@@ -169,21 +173,25 @@ def distorted_inputs(data_dir, batch_size):
     # distortions applied to the image.
 
     # Randomly crop a [height, width] section of the image.
+    # 随机裁剪，统一裁剪到24x24像素大小
     distorted_image = tf.random_crop(reshaped_image, [height, width, 3])
 
-    # Randomly flip the image horizontally.
+    # Randomly flip(翻转) the image horizontally(水平翻转，即左右翻转).
     distorted_image = tf.image.random_flip_left_right(distorted_image)
 
-    # Because these operations are not commutative, consider randomizing
-    # the order their operation.
-    # NOTE: since per_image_standardization zeros the mean and makes
-    # the stddev unit, this likely has no effect see tensorflow#1458.
+    # Because these operations are not commutative(可交换), consider randomizing the order their operation.
+    # NOTE: since per_image_standardization zeros the mean and makes the stddev unit, this likely has no effect see tensorflow#1458.
+    
+    # 在某范围随机调整图片亮度 
     distorted_image = tf.image.random_brightness(distorted_image,
                                                  max_delta=63)
+    # 在某范围随机调整图片对比度
     distorted_image = tf.image.random_contrast(distorted_image,
                                                lower=0.2, upper=1.8)
 
     # Subtract off the mean and divide by the variance of the pixels.
+    # 减去平均值并除以像素的方差，使三维矩阵中的数字均值变为0，方差变为1
+    # 在以前的版本中，它其实叫做per_image_whitening，也就是白化操作，目的是使得模型对图片的动态范围变化不敏感
     float_image = tf.image.per_image_standardization(distorted_image)
 
     # Set the shapes of tensors.
@@ -198,6 +206,8 @@ def distorted_inputs(data_dir, batch_size):
            'This will take a few minutes.' % min_queue_examples)
 
   # Generate a batch of images and labels by building up a queue of examples.
+  # 从磁盘上加载图像并进行变换需要花费不少的处理时间
+  # 为了避免这些操作减慢训练过程，设置16个独立的线程中并行进行这些操作，这16个线程被连续的安排在一个TensorFlow队列中
   return _generate_image_and_label_batch(float_image, read_input.label,
                                          min_queue_examples, batch_size,
                                          shuffle=True)
@@ -240,6 +250,7 @@ def inputs(eval_data, data_dir, batch_size):
 
     # Image processing for evaluation.
     # Crop the central [height, width] of the image.
+    # 实现图片的裁剪与填充
     resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
                                                            height, width)
 

@@ -292,8 +292,8 @@ def loss(logits, labels):
   cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
   tf.add_to_collection('losses', cross_entropy_mean)
 
-  # The total loss is defined as the cross entropy loss plus all of the weight
-  # decay terms (L2 loss).
+  # The total loss is defined as the cross entropy loss plus all of the weight decay terms (L2 loss).
+  # 损失值是交叉熵和权重衰减项的和
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
@@ -341,7 +341,15 @@ def train(total_loss, global_step):
   num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
   decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
 
-  # Decay the learning rate exponentially based on the number of steps.
+  # Decay the learning rate exponentially（以指数的方式） based on the number of steps.
+  # 根据step的数量以指数方式衰减学习速率
+  # 
+  # learning_rate：初始值
+  # global_step：全局step数（每个step对应一次batch）
+  # decay_steps：learning rate更新的step周期，即每隔多少step更新一次learning rate的值
+  # decay_rate：指数衰减参数(对应α^t中的α)
+  # staircase：是否阶梯性更新learning rate，也就是global_step/decay_steps的结果是float型还是向下取整
+  # 计算公式：decayed_learning_rate=learning_rate*decay_rate^(global_step/decay_steps)
   lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
                                   global_step,
                                   decay_steps,
@@ -353,6 +361,8 @@ def train(total_loss, global_step):
   loss_averages_op = _add_loss_summaries(total_loss)
 
   # Compute gradients.
+  # control_dependencies()设计是用来控制计算流图的，总结一句话就是，在执行某些op,tensor之前，某些op,tensor得首先被运行
+  # https://blog.csdn.net/pku_jade/article/details/73498753
   with tf.control_dependencies([loss_averages_op]):
     opt = tf.train.GradientDescentOptimizer(lr)
     grads = opt.compute_gradients(total_loss)
@@ -370,6 +380,8 @@ def train(total_loss, global_step):
       tf.summary.histogram(var.op.name + '/gradients', grad)
 
   # Track the moving averages of all trainable variables.
+  # 计算 学习参数的 moving average(移动平均数) , 在评估期间会使用这些平均数来提高预测性能
+  # 官网：https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
   variable_averages = tf.train.ExponentialMovingAverage(
       MOVING_AVERAGE_DECAY, global_step)
   variables_averages_op = variable_averages.apply(tf.trainable_variables())

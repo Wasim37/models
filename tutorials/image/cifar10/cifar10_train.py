@@ -32,7 +32,12 @@ data set, compile the program and train the model.
 
 http://tensorflow.org/tutorials/deep_cnn/
 """
-from __future__ import absolute_import
+
+# from __future__ import * 作用：把下一个新版本的特性导入到当前版本，就可以在当前版本中测试一些新版本的语法特性，例如在python2的环境下加入这一句可以测试python3的输出语法
+# absolute_import 绝对导入、print_function 精确除法
+# print_function的使用：https://www.cnblogs.com/cnXuYang/p/8514526.html
+
+from __future__ import absolute_import 
 from __future__ import division
 from __future__ import print_function
 
@@ -119,11 +124,12 @@ def train():
           # 2、打印出来的损失值是最近一批数据的损失值的均值。请记住损失值是交叉熵和权重衰减项的和；
           # 3、上面打印结果中关于一批数据的处理速度是在Tesla K40C上统计出来的，如果你运行在CPU上，性能会比此要低；
 
+    # StopAtStepHook：https://www.tensorflow.org/api_docs/python/tf/train/StopAtStepHook
+    # NanTensorHook 如果损失为Nan时，引发异常停止训练
     with tf.train.MonitoredTrainingSession(
         checkpoint_dir=FLAGS.train_dir,
         hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
-               tf.train.NanTensorHook(loss),
-               _LoggerHook()],
+               tf.train.NanTensorHook(loss), _LoggerHook()],
         config=tf.ConfigProto(
             log_device_placement=FLAGS.log_device_placement)) as mon_sess:
       while not mon_sess.should_stop():

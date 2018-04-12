@@ -240,6 +240,7 @@ def inputs(eval_data, data_dir, batch_size):
 
   with tf.name_scope('input'):
     # Create a queue that produces the filenames to read.
+    # 队列：https://blog.csdn.net/shenxiaolu1984/article/details/53024513
     filename_queue = tf.train.string_input_producer(filenames)
 
     # Read examples from files in the filename queue.

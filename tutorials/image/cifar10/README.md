@@ -13,7 +13,7 @@ Detailed instructions on how to get started available at:
 http://tensorflow.org/tutorials/deep_cnn/
 
 
-CIFAR-10 重点：：
+CIFAR-10 重点：
 1、核心数学组件包括卷积、修正线性激活、最大池化以及局部响应归一化；
 2、训练过程中可视化网络行为，这些行为包括输入图像、损失情况、网络行为的分布情况以及梯度；
 3、用于计算 学习参数的移动平均数 的教程，以及在评估期间使用这些平均数来提高预测性能。

@@ -89,6 +89,9 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
     coord = tf.train.Coordinator()
     try:
       threads = []
+      # 获取所有的 QueueRunner，cifar10.inputs方法一共声明了两个QueueRunner
+      # 第一个由tf.train.string_input_produecer函数创建，负责管理数据文件名
+      # 第二个由tf.train.shuffle_batch函数创建，负责管理样本
       for qr in tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
         threads.extend(qr.create_threads(sess, coord=coord, daemon=True,
                                          start=True))
@@ -101,7 +104,6 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
         predictions = sess.run([top_k_op])
         true_count += np.sum(predictions)
         step += 1
-        print(step)
 
       # Compute precision @ 1.
       precision = true_count / total_sample_count

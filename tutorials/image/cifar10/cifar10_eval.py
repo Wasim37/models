@@ -82,6 +82,10 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       return
 
     # Start the queue runners.
+    # http://www.tensorfly.cn/tfdoc/how_tos/threading_and_queues.html
+    # tf.Coordinator和 tf.QueueRunner 从设计上这两个类必须被一起使用。
+    # Coordinator类可以用来同时停止多个工作线程并且向那个在等待所有工作线程终止的程序报告异常
+    # QueueRunner类用来协调多个工作线程同时将多个张量推入同一个队列中。
     coord = tf.train.Coordinator()
     try:
       threads = []
@@ -97,6 +101,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
         predictions = sess.run([top_k_op])
         true_count += np.sum(predictions)
         step += 1
+        print(step)
 
       # Compute precision @ 1.
       precision = true_count / total_sample_count
@@ -109,7 +114,11 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
     except Exception as e:  # pylint: disable=broad-except
       coord.request_stop(e)
 
+    # request_stop：请求线程停止
     coord.request_stop()
+    # join：等待threads列表里的线程终止
+    # stop_grace_period_secs：调用 `request_stop()` 时，线程被给予'stop_grace_period_secs'秒钟以终止
+    # 如果它们中的任何一个在该时间段过后仍然存在，则会引发一个`RuntimeError`
     coord.join(threads, stop_grace_period_secs=10)
 
 
@@ -125,6 +134,8 @@ def evaluate():
     logits = cifar10.inference(images)
 
     # Calculate predictions.
+    # in_top_k 用于计算预测的结果和实际结果的是否相等
+    # in_top_k的用法: https://blog.csdn.net/uestc_c2_403/article/details/73187915
     top_k_op = tf.nn.in_top_k(logits, labels, 1)
 
     # Restore the moving average version of the learned variables for eval.
@@ -138,6 +149,7 @@ def evaluate():
 
     summary_writer = tf.summary.FileWriter(FLAGS.eval_dir, g)
 
+    # 每隔一定时间进行评估，只对当前训练好的最新的模型进行评估(即可以边训练边评估)
     while True:
       eval_once(saver, summary_writer, top_k_op, summary_op)
       if FLAGS.run_once:

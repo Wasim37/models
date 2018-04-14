@@ -380,8 +380,9 @@ def train(total_loss, global_step):
       tf.summary.histogram(var.op.name + '/gradients', grad)
 
   # Track the moving averages of all trainable variables.
-  # 计算 学习参数的 moving average(移动平均数) , 在评估期间会使用这些平均数来提高预测性能
+  # 使用指数衰减来计算变量的移动平均值, 在评估期间会使用这些平均数来提高预测性能
   # 官网：https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
+  # 其他介绍：https://www.cnblogs.com/cloud-ken/p/7521609.html
   variable_averages = tf.train.ExponentialMovingAverage(
       MOVING_AVERAGE_DECAY, global_step)
   variables_averages_op = variable_averages.apply(tf.trainable_variables())

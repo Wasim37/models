@@ -82,6 +82,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       return
 
     # Start the queue runners.
+    # http://brightliao.me/2017/01/16/dl-workshop-massive-network-tips/
     # http://www.tensorfly.cn/tfdoc/how_tos/threading_and_queues.html
     # tf.Coordinator和 tf.QueueRunner 从设计上这两个类必须被一起使用。
     # Coordinator类可以用来同时停止多个工作线程并且向那个在等待所有工作线程终止的程序报告异常

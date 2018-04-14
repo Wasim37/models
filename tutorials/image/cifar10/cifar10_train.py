@@ -64,6 +64,8 @@ tf.app.flags.DEFINE_integer('log_frequency', 10,
 def train():
   """Train CIFAR-10 for a number of steps."""
   with tf.Graph().as_default():
+    
+    # 设置 一个用于记录全局训练步骤的值
     global_step = tf.train.get_or_create_global_step()
 
     # Get images and labels for CIFAR-10.
@@ -141,7 +143,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)
-  train()
+  train().d
 
 
 if __name__ == '__main__':

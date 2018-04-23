@@ -69,9 +69,9 @@ def train():
     global_step = tf.train.get_or_create_global_step()
 
     # Get images and labels for CIFAR-10.
-    # Force input pipeline to CPU:0 to avoid operations sometimes ending up on
-    # GPU and resulting in a slow down.
+    # Force input pipeline to CPU:0 to avoid operations sometimes ending up on GPU and resulting in a slow down.
     with tf.device('/cpu:0'):
+      # images的shape=(128, 24, 24, 3)
       images, labels = cifar10.distorted_inputs()
 
     # Build a Graph that computes the logits predictions from the inference model.
@@ -143,7 +143,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)
-  train().d
+  train()
 
 
 if __name__ == '__main__':

@@ -350,6 +350,7 @@ def train(total_loss, global_step):
   # decay_rate：指数衰减参数(对应α^t中的α)
   # staircase：是否阶梯性更新learning rate，也就是global_step/decay_steps的结果是float型还是向下取整
   # 计算公式：decayed_learning_rate=learning_rate*decay_rate^(global_step/decay_steps)
+  # http://kyonhuang.top/Andrew-Ng-Deep-Learning-notes/#/Improving_Deep_Neural_Networks/优化算法?id=%e5%ad%a6%e4%b9%a0%e7%8e%87%e8%a1%b0%e5%87%8f
   lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
                                   global_step,
                                   decay_steps,
@@ -382,7 +383,8 @@ def train(total_loss, global_step):
   # Track the moving averages of all trainable variables.
   # 使用指数衰减来计算变量的移动平均值, 在评估期间会使用这些平均数来提高预测性能
   # 官网：https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
-  # 其他介绍：https://www.cnblogs.com/cloud-ken/p/7521609.html
+  # 【指数加权平均】http://kyonhuang.top/Andrew-Ng-Deep-Learning-notes/#/Improving_Deep_Neural_Networks/优化算法?id=%e6%8c%87%e6%95%b0%e5%b9%b3%e5%9d%87%e5%8a%a0%e6%9d%83
+  # 【指数移动平均】：https://www.cnblogs.com/cloud-ken/p/7521609.html
   variable_averages = tf.train.ExponentialMovingAverage(
       MOVING_AVERAGE_DECAY, global_step)
   variables_averages_op = variable_averages.apply(tf.trainable_variables())

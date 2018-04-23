@@ -1,3 +1,12 @@
+TensorFlow拥有很多库，比如Keras、TFLearn和Sonnet，对于模型训练来说，使用这些库比使用低级功能更简单。
+尽管Keras的API目前正在添加到TensorFlow中去，但TensorFlow本身就提供了一些高级构件，而且最新的1.3版本中也引入了一些新的构件。
+
+在这篇文章中，我们将看到一个使用了这些最新的高级构件的例子，包括Estimator（估算器）、Experiment（实验）和Dataset（数据集）。
+值得注意的是，你可以独立地使用Experiment和Dataset。
+文章地址：https://yq.aliyun.com/articles/194302
+
+-----------------------------
+
 CIFAR-10 is a common benchmark in machine learning for image recognition.
 
 http://www.cs.toronto.edu/~kriz/cifar.html

@@ -221,8 +221,12 @@ def run_benchmark():
     init = tf.global_variables_initializer()
 
     # Start running operations on the Graph.
+    # tf.ConfigProto 用来对session进行参数配置
     config = tf.ConfigProto()
-    config.gpu_options.allocator_type = 'BFC'
+    # https://www.tensorflow.org/programmers_guide/using_gpu
+    # config.gpu_options.per_process_gpu_memory_fraction = 0.5  # 程序最多只能占用指定gpu50%的显存  
+    # config.gpu_options.allow_growth = True      # 程序按需申请内存 
+    config.gpu_options.allocator_type = 'BFC' # GPU 分配策略类型，"BFC"：最佳适配对齐算法，dlmalloc 简化的版本
     sess = tf.Session(config=config)
     sess.run(init)
 
@@ -255,5 +259,7 @@ if __name__ == '__main__':
       default=100,
       help='Number of batches to run.'
   )
+  
+  # unparsed 存放未定义的参数
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

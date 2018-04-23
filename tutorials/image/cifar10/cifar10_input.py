@@ -119,11 +119,13 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   # read 'batch_size' images + labels from the example queue.
   num_preprocess_threads = 16
   if shuffle:
+    # 创建一个随机队列，最大长度为20000 + 3*128 = 20384，出队后的最小长度为2000
+    # https://blog.csdn.net/shenxiaolu1984/article/details/53024513
     images, label_batch = tf.train.shuffle_batch(
         [image, label],
         batch_size=batch_size,
         num_threads=num_preprocess_threads,
-        capacity=min_queue_examples + 3 * batch_size,
+        capacity=min_queue_examples + 3 * batch_size, # 
         min_after_dequeue=min_queue_examples)
   else:
     images, label_batch = tf.train.batch(

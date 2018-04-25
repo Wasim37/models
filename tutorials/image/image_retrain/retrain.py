@@ -147,6 +147,9 @@ FAKE_QUANT_OPS = ('FakeQuantWithMinMaxVars',
 
 def create_image_lists(image_dir, testing_percentage, validation_percentage):
   """Builds a list of training images from the file system.
+  
+  得到的所有图片都存在result这个字典(dictionary)里。
+  这个字典的key为类别的名称，value也是一个字典，字典里存储了所有的图片名称。
 
   Analyzes the sub folders in the image directory, splits them into stable
   training, testing, and validation sets, and returns a data structure
@@ -165,14 +168,19 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
   if not tf.gfile.Exists(image_dir):
     tf.logging.error("Image directory '" + image_dir + "' not found.")
     return None
+  
+  # 获取当前目录下所有的子目录
   result = collections.OrderedDict()
   sub_dirs = sorted(x[0] for x in tf.gfile.Walk(image_dir))
-  # The root directory comes first, so skip it.
+  
+  # 得到的第一个目录是当前目录，不需要考虑
   is_root_dir = True
   for sub_dir in sub_dirs:
     if is_root_dir:
       is_root_dir = False
       continue
+    
+    # 获取当前目录下所有的有效图片文件
     extensions = ['jpg', 'jpeg', 'JPG', 'JPEG']
     file_list = []
     dir_name = os.path.basename(sub_dir)
@@ -192,6 +200,8 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
       tf.logging.warning(
           'WARNING: Folder {} has more than {} images. Some images will '
           'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
+    
+    # 通过目录名获取类别的名称。
     label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
     training_images = []
     testing_images = []
@@ -215,12 +225,16 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
       percentage_hash = ((int(hash_name_hashed, 16) %
                           (MAX_NUM_IMAGES_PER_CLASS + 1)) *
                          (100.0 / MAX_NUM_IMAGES_PER_CLASS))
+      
+      # 将数据分到训练数据集、测试数据集和验证数据集。
       if percentage_hash < validation_percentage:
         validation_images.append(base_name)
       elif percentage_hash < (testing_percentage + validation_percentage):
         testing_images.append(base_name)
       else:
         training_images.append(base_name)
+        
+    # 将当前类别的数据放入结果字典
     result[label_name] = {
         'dir': dir_name,
         'training': training_images,
@@ -232,7 +246,14 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
 
 def get_image_path(image_lists, label_name, index, image_dir, category):
   """Returns a path to an image for a label at the given index.
-
+  
+  # 通过类别名称、所属数据集和图片编号获取一张图片的地址。
+  # image_lists参数给出了所有图片信息。
+  # image_dir参数给出了根目录。存放图片数据的根目录和存放图片特征向量的根目录地址不同。
+  # label_name参数给定了类别的名称。
+  # index参数给定了需要获取的图片的编号。
+  # category参数指定了需要获取的图片是在训练数据集、测试数据集还是验证数据集。
+  
   Args:
     image_lists: OrderedDict of training images for each label.
     label_name: Label string we want to get an image for.
@@ -249,16 +270,23 @@ def get_image_path(image_lists, label_name, index, image_dir, category):
   """
   if label_name not in image_lists:
     tf.logging.fatal('Label does not exist %s.', label_name)
+    
+  # 获取给定类别中所有图片的信息
   label_lists = image_lists[label_name]
+  
   if category not in label_lists:
     tf.logging.fatal('Category does not exist %s.', category)
+  
+  # 根据所属数据集的名称获取集合中的全部图片信息
   category_list = label_lists[category]
   if not category_list:
     tf.logging.fatal('Label %s has no images in the category %s.',
                      label_name, category)
   mod_index = index % len(category_list)
+  # 获取图片的文件名
   base_name = category_list[mod_index]
   sub_dir = label_lists['dir']
+  # 最终的地址为数据根目录的地址 + 类别的文件夹 + 图片的名称
   full_path = os.path.join(image_dir, sub_dir, base_name)
   return full_path
 
@@ -266,6 +294,8 @@ def get_image_path(image_lists, label_name, index, image_dir, category):
 def get_bottleneck_path(image_lists, label_name, index, bottleneck_dir,
                         category, module_name):
   """Returns a path to a bottleneck file for a label at the given index.
+  
+  # 通过类别名称、所属数据集和图片编号获取经过Inception-v3模型处理之后的特征向量文件地址
 
   Args:
     image_lists: OrderedDict of training images for each label.
@@ -314,6 +344,8 @@ def run_bottleneck_on_image(sess, image_data, image_data_tensor,
                             decoded_image_tensor, resized_input_tensor,
                             bottleneck_tensor):
   """Runs inference on an image to extract the 'bottleneck' summary layer.
+  
+  # 使用加载的训练好的Inception-v3模型处理一张图片，得到这个图片的特征向量
 
   Args:
     sess: Current active TensorFlow Session.
@@ -330,8 +362,10 @@ def run_bottleneck_on_image(sess, image_data, image_data_tensor,
   resized_input_values = sess.run(decoded_image_tensor,
                                   {image_data_tensor: image_data})
   # Then run it through the recognition network.
+  # 这个过程实际上就是将当前图片作为输入计算瓶颈张量的值。这个瓶颈张量的值就是这张图片的新的特征向量
   bottleneck_values = sess.run(bottleneck_tensor,
                                {resized_input_tensor: resized_input_values})
+  # 经过卷积神经网络处理的结果是一个四维数组，需要将这个结果压缩成一个特征向量（一维数组）
   bottleneck_values = np.squeeze(bottleneck_values)
   return bottleneck_values
 
@@ -352,18 +386,23 @@ def create_bottleneck_file(bottleneck_path, image_lists, label_name, index,
                            bottleneck_tensor):
   """Create a single bottleneck file."""
   tf.logging.info('Creating bottleneck at ' + bottleneck_path)
+  # 获取原始的图片路径
   image_path = get_image_path(image_lists, label_name, index,
                               image_dir, category)
   if not tf.gfile.Exists(image_path):
     tf.logging.fatal('File does not exist %s', image_path)
+  # 获取图片内容
   image_data = tf.gfile.FastGFile(image_path, 'rb').read()
   try:
+    # 由于输入的图片大小不一致，此处得到的image_data大小也不一致（已验证），但却都能通过加载的inception-v3模型生成一个2048的特征向量。具体原理不详。
+    # 通过Inception-v3模型计算特征向量    
     bottleneck_values = run_bottleneck_on_image(
         sess, image_data, jpeg_data_tensor, decoded_image_tensor,
         resized_input_tensor, bottleneck_tensor)
   except Exception as e:
     raise RuntimeError('Error during processing file %s (%s)' % (image_path,
                                                                  str(e)))
+  # 将计算得到的特征向量存入文件
   bottleneck_string = ','.join(str(x) for x in bottleneck_values)
   with open(bottleneck_path, 'w') as bottleneck_file:
     bottleneck_file.write(bottleneck_string)
@@ -374,6 +413,9 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
                              decoded_image_tensor, resized_input_tensor,
                              bottleneck_tensor, module_name):
   """Retrieves or calculates bottleneck values for an image.
+
+  # 这个函数首先获取一张图片经过Inception-v3模型处理之后的特征向量。
+  # 然后先试图寻找已经计算且保存下来的特征向量，如果找不到则先计算这个特征向量，然后保存到文件。
 
   If a cached version of the bottleneck data exists on-disk, return that,
   otherwise calculate the data and save it to disk for future use.
@@ -398,17 +440,22 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
   Returns:
     Numpy array of values produced by the bottleneck layer for the image.
   """
+  
+  # 获取一张图片对应的特征向量文件的路径
   label_lists = image_lists[label_name]
   sub_dir = label_lists['dir']
   sub_dir_path = os.path.join(bottleneck_dir, sub_dir)
   ensure_dir_exists(sub_dir_path)
   bottleneck_path = get_bottleneck_path(image_lists, label_name, index,
                                         bottleneck_dir, category, module_name)
+  
+  # 如果这个特征向量文件不存在，则通过Inception-v3模型来计算特征向量，并将计算的结果存入文
   if not os.path.exists(bottleneck_path):
     create_bottleneck_file(bottleneck_path, image_lists, label_name, index,
                            image_dir, category, sess, jpeg_data_tensor,
                            decoded_image_tensor, resized_input_tensor,
                            bottleneck_tensor)
+  # 从文件中获取图片相应的特征向量
   with open(bottleneck_path, 'r') as bottleneck_file:
     bottleneck_string = bottleneck_file.read()
   did_hit_error = False
@@ -417,6 +464,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
   except ValueError:
     tf.logging.warning('Invalid float found, recreating bottleneck')
     did_hit_error = True
+  
   if did_hit_error:
     create_bottleneck_file(bottleneck_path, image_lists, label_name, index,
                            image_dir, category, sess, jpeg_data_tensor,
@@ -427,6 +475,8 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
     # Allow exceptions to propagate here, since they shouldn't happen after a
     # fresh creation
     bottleneck_values = [float(x) for x in bottleneck_string.split(',')]
+  
+  # 返回得到的特征向量
   return bottleneck_values
 
 
@@ -480,6 +530,8 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
                                   bottleneck_tensor, module_name):
   """Retrieves bottleneck values for cached images.
 
+  # 这个函数随机获取一个batch的图片作为训练数据
+  
   If no distortions are being applied, this function can retrieve the cached
   bottleneck values directly from disk for images. It picks a random set of
   images from the specified category.
@@ -511,6 +563,7 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
   if how_many >= 0:
     # Retrieve a random sample of bottlenecks.
     for unused_i in range(how_many):
+      # 随机一个类别和图片的编号加入当前的训练数据
       label_index = random.randrange(class_count)
       label_name = list(image_lists.keys())[label_index]
       image_index = random.randrange(MAX_NUM_IMAGES_PER_CLASS + 1)
@@ -993,11 +1046,15 @@ def main(_):
     return -1
 
   # Prepare necessary directories that can be used during training
+  # 文件目录预处理
   prepare_file_system()
 
   # Look at the folder structure, and create lists of all the images.
+  # 生成 训练 测试 验证列表
   image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage,
                                    FLAGS.validation_percentage)
+  
+  # 类别总数
   class_count = len(image_lists.keys())
   if class_count == 0:
     tf.logging.error('No valid folders of images found at ' + FLAGS.image_dir)
@@ -1009,11 +1066,13 @@ def main(_):
     return -1
 
   # See if the command-line flags mean we're applying any distortions.
+  # 根据传参来确定后期是否进行图片增强处理
   do_distort_images = should_distort_images(
       FLAGS.flip_left_right, FLAGS.random_crop, FLAGS.random_scale,
       FLAGS.random_brightness)
 
   # Set up the pre-trained graph.
+  # 加载 inception_v3 模型
   module_spec = hub.load_module_spec(FLAGS.tfhub_module)
   graph, bottleneck_tensor, resized_image_tensor, wants_quantization = (
       create_module_graph(module_spec))

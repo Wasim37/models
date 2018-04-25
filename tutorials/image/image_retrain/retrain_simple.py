@@ -173,6 +173,7 @@ def get_random_cached_bottlenecks(sess, n_classes, image_lists, how_many, catego
         label_index = random.randrange(n_classes)
         label_name = list(image_lists.keys())[label_index]
         image_index = random.randrange(65536)
+        # 获取一张图片经过Inception-v3模型处理之后的特征向量
         bottleneck = get_or_create_bottleneck(sess, image_lists, label_name, image_index, category,
                                               jpeg_data_tensor, bottleneck_tensor)
         ground_truth = np.zeros(n_classes, dtype=np.float32)
@@ -202,22 +203,25 @@ def get_test_bottlenecks(sess, image_lists, n_classes, jpeg_data_tensor, bottlen
 
 
 def main(_):
-    # 读取所有图片。
+    
+    # 读取所有图片
     image_lists = create_image_lists(TEST_PERCENTAGE, VALIDATION_PERCENTAGE)
     n_classes = len(image_lists.keys())
+    
     # 读取已经训练好的Inception-v3模型。
     # 谷歌训练好的模型保存在了GraphDef Protocol Buffer中，里面保存了每一个节点取值的计算方法以及变量的取值。
-    # TensorFlow模型持久化的问题在第5章中有详细的介绍。
     with gfile.FastGFile(os.path.join(MODEL_DIR, MODEL_FILE), 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
-    # 加载读取的Inception-v3模型，并返回数据输入所对应的张量以及计算瓶颈层结果所对应的张量。
+    # 加载读取的Inception-v3模型，并返回数据输入所对应的张量以及计算瓶颈层结果所对应的张量
     bottleneck_tensor, jpeg_data_tensor = tf.import_graph_def(graph_def, return_elements=[BOTTLENECK_TENSOR_NAME, JPEG_DATA_TENSOR_NAME])
+    
     # 定义新的神经网络输入，这个输入就是新的图片经过Inception-v3模型前向传播到达瓶颈层时的结点取值。
     # 可以将这个过程类似的理解为一种特征提取。
     bottleneck_input = tf.placeholder(tf.float32, [None, BOTTLENECK_TENSOR_SIZE], name='BottleneckInputPlaceholder')
     # 定义新的标准答案输入
     ground_truth_input = tf.placeholder(tf.float32, [None, n_classes], name='GroundTruthInput')
+    
     # 定义一层全连接层来解决新的图片分类问题。
     # 因为训练好的Inception-v3模型已经将原始的图片抽象为了更加容易分类的特征向量了，所以不需要再训练那么复杂的神经网络来完成这个新的分类任务。
     with tf.name_scope('final_training_ops'):
@@ -225,10 +229,12 @@ def main(_):
         biases = tf.Variable(tf.zeros([n_classes]))
         logits = tf.matmul(bottleneck_input, weights) + biases
         final_tensor = tf.nn.softmax(logits)
+    
     # 定义交叉熵损失函数
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=ground_truth_input)
     cross_entropy_mean = tf.reduce_mean(cross_entropy)
     train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_entropy_mean)
+    
     # 计算正确率
     with tf.name_scope('evaluation'):
         correct_prediction = tf.equal(tf.argmax(final_tensor, 1), tf.argmax(ground_truth_input, 1))

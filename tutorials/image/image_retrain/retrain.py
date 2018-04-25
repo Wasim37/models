@@ -455,6 +455,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
                            image_dir, category, sess, jpeg_data_tensor,
                            decoded_image_tensor, resized_input_tensor,
                            bottleneck_tensor)
+  
   # 从文件中获取图片相应的特征向量
   with open(bottleneck_path, 'r') as bottleneck_file:
     bottleneck_string = bottleneck_file.read()
@@ -771,6 +772,8 @@ def variable_summaries(var):
 def add_final_retrain_ops(class_count, final_tensor_name, bottleneck_tensor,
                           quantize_layer, is_training):
   """Adds a new softmax and fully-connected layer for training and eval.
+  
+  # 定义全新的全连接层和softmax层来解决新的图片分类问题
 
   We need to retrain the top layer to identify our new classes, so this function
   adds the right operations to the graph, along with some variables to hold the
@@ -1046,15 +1049,12 @@ def main(_):
     return -1
 
   # Prepare necessary directories that can be used during training
-  # 文件目录预处理
   prepare_file_system()
 
   # Look at the folder structure, and create lists of all the images.
-  # 生成 训练 测试 验证列表
+  # 读取所有图片
   image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage,
                                    FLAGS.validation_percentage)
-  
-  # 类别总数
   class_count = len(image_lists.keys())
   if class_count == 0:
     tf.logging.error('No valid folders of images found at ' + FLAGS.image_dir)
@@ -1072,13 +1072,14 @@ def main(_):
       FLAGS.random_brightness)
 
   # Set up the pre-trained graph.
-  # 加载 inception_v3 模型
+  # 加载inception_v3模型
   module_spec = hub.load_module_spec(FLAGS.tfhub_module)
   graph, bottleneck_tensor, resized_image_tensor, wants_quantization = (
       create_module_graph(module_spec))
 
   # Add the new layer that we'll be training.
   with graph.as_default():
+    # 定义全新的全连接层和softmax层来解决新的图片分类问题，并返回相应数据
     (train_step, cross_entropy, bottleneck_input,
      ground_truth_input, final_tensor) = add_final_retrain_ops(
          class_count, FLAGS.final_tensor_name, bottleneck_tensor,
@@ -1095,6 +1096,7 @@ def main(_):
 
     if do_distort_images:
       # We will be applying distortions, so setup the operations we'll need.
+      # 图像增强处理
       (distorted_jpeg_data_tensor,
        distorted_image_tensor) = add_input_distortions(
            FLAGS.flip_left_right, FLAGS.random_crop, FLAGS.random_scale,
@@ -1102,6 +1104,9 @@ def main(_):
     else:
       # We'll make sure we've calculated the 'bottleneck' image summaries and
       # cached them on disk.
+      # 由于每个图像在训练过程中都会重复使用多次，计算每个瓶颈值需要花费大量时间，因此将这些瓶颈值缓存在磁盘上可以加快速度
+      # cache_bottlenecks 就是确保所有的训练、验证、测试图片的瓶颈值已被缓存
+      # 如果使用了图像增强处理，同一图像的瓶颈值每次计算都会不同，没有缓存的必要
       cache_bottlenecks(sess, image_lists, FLAGS.image_dir,
                         FLAGS.bottleneck_dir, jpeg_data_tensor,
                         decoded_image_tensor, resized_image_tensor,
@@ -1127,20 +1132,24 @@ def main(_):
       # Get a batch of input bottleneck values, either calculated fresh every
       # time with distortions applied, or from the cache stored on disk.
       if do_distort_images:
+        # 随机获取用来训练的经过图片增强处理的瓶颈值数据
         (train_bottlenecks,
          train_ground_truth) = get_random_distorted_bottlenecks(
              sess, image_lists, FLAGS.train_batch_size, 'training',
              FLAGS.image_dir, distorted_jpeg_data_tensor,
              distorted_image_tensor, resized_image_tensor, bottleneck_tensor)
       else:
+        # 随机获取用来训练的已经缓存好的瓶颈值数据
         (train_bottlenecks,
          train_ground_truth, _) = get_random_cached_bottlenecks(
              sess, image_lists, FLAGS.train_batch_size, 'training',
              FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
              decoded_image_tensor, resized_image_tensor, bottleneck_tensor,
              FLAGS.tfhub_module)
+        
       # Feed the bottlenecks and ground truth into the graph, and run a training
       # step. Capture training summaries for TensorBoard with the `merged` op.
+      # 开始训练
       train_summary, _ = sess.run(
           [merged, train_step],
           feed_dict={bottleneck_input: train_bottlenecks,
@@ -1150,6 +1159,7 @@ def main(_):
       # Every so often, print out how well the graph is training.
       is_last_step = (i + 1 == FLAGS.how_many_training_steps)
       if (i % FLAGS.eval_step_interval) == 0 or is_last_step:
+        # 打印准确率与交叉熵损失
         train_accuracy, cross_entropy_value = sess.run(
             [evaluation_step, cross_entropy],
             feed_dict={bottleneck_input: train_bottlenecks,
@@ -1169,6 +1179,7 @@ def main(_):
                 FLAGS.tfhub_module))
         # Run a validation step and capture training summaries for TensorBoard
         # with the `merged` op.
+        # 打印准确率与交叉熵损失
         validation_summary, validation_accuracy = sess.run(
             [merged, evaluation_step],
             feed_dict={bottleneck_input: validation_bottlenecks,
@@ -1179,6 +1190,7 @@ def main(_):
                          len(validation_bottlenecks)))
 
       # Store intermediate results
+      # 每隔 intermediate_store_frequency 次，进行中间结果的保存
       intermediate_frequency = FLAGS.intermediate_store_frequency
 
       if (intermediate_frequency > 0 and (i % intermediate_frequency == 0)
@@ -1196,14 +1208,12 @@ def main(_):
     # After training is complete, force one last save of the train checkpoint.
     train_saver.save(sess, CHECKPOINT_NAME)
 
-    # We've completed all our training, so run a final test evaluation on
-    # some new images we haven't used before.
+    # 目前已经完成了所有的训练，现在使用从未使用过的测试数据集进行最终结果的评估
     run_final_eval(sess, module_spec, class_count, image_lists,
                    jpeg_data_tensor, decoded_image_tensor, resized_image_tensor,
                    bottleneck_tensor)
 
-    # Write out the trained graph and labels with the weights stored as
-    # constants.
+    # Write out the trained graph and labels with the weights stored as constants.
     tf.logging.info('Save final result to : ' + FLAGS.output_graph)
     if wants_quantization:
       tf.logging.info('The model is instrumented for quantization with TF-Lite')

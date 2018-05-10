@@ -15,6 +15,8 @@
 
 """Example / benchmark for building a PTB LSTM model.
 
+通过以前单词的历史记录来预测文本中的下一个单词
+
 Trains the model described in:
 (Zaremba, et. al.) Recurrent Neural Network Regularization
 http://arxiv.org/abs/1409.2329

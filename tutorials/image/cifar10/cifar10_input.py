@@ -120,6 +120,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   num_preprocess_threads = 16
   if shuffle:
     # 创建一个随机队列，最大长度为20000 + 3*128 = 20384，出队后的最小长度为2000
+    # https://blog.csdn.net/qq_38906523/article/details/78956503
     # https://blog.csdn.net/shenxiaolu1984/article/details/53024513
     images, label_batch = tf.train.shuffle_batch(
         [image, label],
@@ -159,7 +160,7 @@ def distorted_inputs(data_dir, batch_size):
       raise ValueError('Failed to find file: ' + f)
 
   # Create a queue that produces the filenames to read.
-  # 队列：https://blog.csdn.net/shenxiaolu1984/article/details/53024513
+  # https://blog.csdn.net/zzk1995/article/details/54292859
   filename_queue = tf.train.string_input_producer(filenames)
 
   # 数据增强模块

@@ -12,6 +12,8 @@ Detailed instructions on how to get started available at:
 
 http://tensorflow.org/tutorials/deep_cnn/
 
+---
+
 **CIFAR-10 重点：**
 - 核心数学组件包括卷积、修正线性激活、最大池化以及局部响应归一化；
 - 训练过程中可视化网络行为，这些行为包括输入图像、损失情况、网络行为的分布情况以及梯度；
@@ -22,3 +24,20 @@ http://tensorflow.org/tutorials/deep_cnn/
 我们也提供了模型的多GUP版本，用以表明：
 - 配置模型后，可以使其在多个GPU上并行训练
 - 可以在多个GPU之间共享和更新变量值
+
+---
+
+Cifar-10 由60000张32*32的 RGB 彩色图片构成，共10个分类。
+50000张训练，10000张测试（交叉验证）。
+这个数据集最大的特点在于将识别迁移到了普适物体，而且应用于多分类（姊妹数据集Cifar-100达到100类，ILSVRC比赛则是1000类）
+
+image的个数：60000
+image的大小：32*32*3
+class的个数：10 （飞机；汽车；鸟；猫；鹿；狗；青蛙；马；船；卡车）
+注：卡车的类中只存在卡车，皮卡和suv都不在此类中。
+
+train batch有5个，
+test batch有1个，
+batches.meta为class的名字，
+每个batch的有10000个data和相对应的label，
+label从0到9，每一个data的大小为3073个字节，等于32*32*3

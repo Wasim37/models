@@ -126,6 +126,7 @@ def train():
           # 2、打印出来的损失值是最近一批数据的损失值的均值。请记住损失值是交叉熵和权重衰减项的和；
           # 3、上面打印结果中关于一批数据的处理速度是在Tesla K40C上统计出来的，如果你运行在CPU上，性能会比此要低；
 
+    # MonitoredTrainingSession：https://blog.csdn.net/Reformatsky/article/details/79441061
     # StopAtStepHook：https://www.tensorflow.org/api_docs/python/tf/train/StopAtStepHook
     # NanTensorHook 如果损失为Nan时，引发异常停止训练
     with tf.train.MonitoredTrainingSession(

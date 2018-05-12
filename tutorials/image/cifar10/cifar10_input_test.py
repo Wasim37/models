@@ -26,7 +26,7 @@ import tensorflow as tf
 import cifar10_input
 
 
-class CIFAR10InputTestas(tf.test.TestCase):
+class CIFAR10InputTest(tf.test.TestCase):
   '''在我们要做单元测试时，我们可以让我们的测试类继承至tf.test.TestCase，就可以使用self.test_session来方便的创建测试环境了
   '''
 

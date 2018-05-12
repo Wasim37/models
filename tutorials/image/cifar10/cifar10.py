@@ -17,10 +17,10 @@
 
 Summary of available functions:
 
- # Compute input images and labels for training. If you would like to run
- # evaluations, use inputs() instead.
+ # Compute input images and labels for training.
+ # 如果是用来评估，则用 inputs() 代替 distorted_inputs()
  inputs, labels = distorted_inputs()
-
+ 
  # Compute inference on the model inputs to make a prediction.
  predictions = inference(inputs)
 
@@ -30,7 +30,7 @@ Summary of available functions:
  # Create a graph to run one step of training with respect to the loss.
  train_op = train(loss, global_step)
 """
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstringinputs()
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -71,6 +71,8 @@ INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
 # names of the summaries when visualizing a model.
+# 如果使用多个GPU训练模型，则对所有Op操作加前缀 tower_name 来区分。 
+# 请注意，在可视化模型时，要从摘要名称中删除此前缀。
 TOWER_NAME = 'tower'
 
 DATA_URL = 'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
@@ -89,7 +91,8 @@ def _activation_summary(x):
   """
   # Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
   # session. This helps the clarity of presentation on tensorboard.
-  tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
+  # 如果这是多GPU训练，请从名称中删除'tower_[0-9]/'，这样 tensorboard 的展示会更清晰。
+  tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name) # pattern,repl,string
   tf.summary.histogram(tensor_name + '/activations', x)
   tf.summary.scalar(tensor_name + '/sparsity',
                                        tf.nn.zero_fraction(x))
@@ -188,7 +191,7 @@ def inputs(eval_data):
 
 def inference(images):
   """Build the CIFAR-10 model.
-  练习: inference的输出是未归一化的logits，尝试使用tf.softmax()修改网络架构后返回归一化的预测值。
+  注意：此处inference的输出是未归一化的logits，可以尝试使用tf.softmax()修改网络架构后返回归一化的预测值。
 
   Args:
     images: Images returned from distorted_inputs() or inputs().
@@ -262,6 +265,7 @@ def inference(images):
   # We don't apply softmax here because
   # tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
   # and performs the softmax internally for efficiency.
+  # 此处没有使用 softmax
   with tf.variable_scope('softmax_linear') as scope:
     weights = _variable_with_weight_decay('weights', [192, NUM_CLASSES],
                                           stddev=1/192.0, wd=None)
@@ -287,13 +291,17 @@ def loss(logits, labels):
   """
   # Calculate the average cross entropy loss across the batch.
   labels = tf.cast(labels, tf.int64)
+  # sparse_softmax_cross_entropy_with_logits 输入细节：https://blog.csdn.net/hejunqing14/article/details/52397824
+  # labels 是一个一维的整数
+  # 输入的logits 没有进行归一化
+  # 更多损失函数详见：https://www.jianshu.com/p/75f7e60dae95
   cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=labels, logits=logits, name='cross_entropy_per_example')
   cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
   tf.add_to_collection('losses', cross_entropy_mean)
 
   # The total loss is defined as the cross entropy loss plus all of the weight decay terms (L2 loss).
-  # 损失值是交叉熵和权重衰减项的和
+  # 损失值是交叉熵和权重衰减项L2的和
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
@@ -359,6 +367,7 @@ def train(total_loss, global_step):
   tf.summary.scalar('learning_rate', lr)
 
   # Generate moving averages of all losses and associated summaries.
+  # 生成所有损失的的移动平均值和相关汇总。
   loss_averages_op = _add_loss_summaries(total_loss)
 
   # Compute gradients.

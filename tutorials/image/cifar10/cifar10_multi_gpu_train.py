@@ -166,6 +166,11 @@ def train():
     images, labels = cifar10.distorted_inputs()
     batch_queue = tf.contrib.slim.prefetch_queue.prefetch_queue(
           [images, labels], capacity=2 * FLAGS.num_gpus)
+    
+    # 计算单个副本 inference 和 gradients 的函数称之为tower，一个GPU对应一个tower
+    # 使用tf.name_scope()为tower中的每个op_name加上前缀
+    # 使用tf.device('/gpu:0') 来指定tower中op的运算设备    
+    
     # Calculate the gradients for each model tower.
     tower_grads = []
     with tf.variable_scope(tf.get_variable_scope()):
@@ -180,6 +185,7 @@ def train():
             loss = tower_loss(scope, image_batch, label_batch)
 
             # Reuse variables for the next tower.
+            # 通过 variable_scope 与 get_variable_scope 实现参数共享
             tf.get_variable_scope().reuse_variables()
 
             # Retain the summaries from the final tower.
@@ -193,6 +199,7 @@ def train():
 
     # We must calculate the mean of each gradient. Note that this is the
     # synchronization point across all towers.
+    # 计算梯度均值
     grads = average_gradients(tower_grads)
 
     # Add a summary to track the learning rate.

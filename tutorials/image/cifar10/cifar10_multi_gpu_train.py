@@ -138,6 +138,8 @@ def average_gradients(tower_grads):
 
 def train():
   """Train CIFAR-10 for a number of steps."""
+  # 分布式训练的基本概念详见官网：https://tensorflow.google.cn/deploy/distributed
+  
   with tf.Graph().as_default(), tf.device('/cpu:0'):
     # Create a variable to count the number of train() calls. This equals the
     # number of batches processed * FLAGS.num_gpus.

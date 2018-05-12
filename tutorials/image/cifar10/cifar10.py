@@ -346,6 +346,8 @@ def train(total_loss, global_step):
     train_op: op for training.
   """
   # Variables that affect learning rate.
+  # num_batches_per_epoch = 50000/128
+  # decay_steps = int((50000/128)*350)
   num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
   decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
 
@@ -365,14 +367,12 @@ def train(total_loss, global_step):
                                   LEARNING_RATE_DECAY_FACTOR,
                                   staircase=True)
   tf.summary.scalar('learning_rate', lr)
-
+  
   # Generate moving averages of all losses and associated summaries.
   # 生成所有损失的的移动平均值和相关汇总。
   loss_averages_op = _add_loss_summaries(total_loss)
 
   # Compute gradients.
-  # control_dependencies()设计是用来控制计算流图的，总结一句话就是，在执行某些op,tensor之前，某些op,tensor得首先被运行
-  # https://blog.csdn.net/pku_jade/article/details/73498753
   with tf.control_dependencies([loss_averages_op]):
     opt = tf.train.GradientDescentOptimizer(lr)
     grads = opt.compute_gradients(total_loss)
@@ -390,16 +390,19 @@ def train(total_loss, global_step):
       tf.summary.histogram(var.op.name + '/gradients', grad)
 
   # Track the moving averages of all trainable variables.
-  # 使用指数衰减来计算变量的移动平均值, 在评估期间会使用这些平均数来提高预测性能
+  # 在训练模型时，保持训练参数的移动平均值通常更有益。
+  # 评估模型时，使用训练参数的平均值有时会比直接使用最终的训练值有更好的结果。
   # 官网：https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage
-  # 【指数加权平均】http://kyonhuang.top/Andrew-Ng-Deep-Learning-notes/#/Improving_Deep_Neural_Networks/优化算法?id=%e6%8c%87%e6%95%b0%e5%b9%b3%e5%9d%87%e5%8a%a0%e6%9d%83
-  # 【指数移动平均】：https://www.cnblogs.com/cloud-ken/p/7521609.html
+  # 吴恩达笔记：http://kyonhuang.top/Andrew-Ng-Deep-Learning-notes/#/Improving_Deep_Neural_Networks/优化算法?id=%e6%8c%87%e6%95%b0%e5%b9%b3%e5%9d%87%e5%8a%a0%e6%9d%83
   variable_averages = tf.train.ExponentialMovingAverage(
       MOVING_AVERAGE_DECAY, global_step)
   variables_averages_op = variable_averages.apply(tf.trainable_variables())
-
+  
+  # control_dependencies() 依赖控制，确保某些 op 按顺序执行
+  # 返回的 train_op 可以理解为 apply_gradient_op 和 variables_averages_op 的组合
+  # https://blog.csdn.net/pku_jade/article/details/73498753 文章末尾有介绍
   with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
-    train_op = tf.no_op(name='train')
+    train_op = tf.no_op(name='train') # 什么也不做
 
   return train_op
 
